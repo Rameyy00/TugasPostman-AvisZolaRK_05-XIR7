@@ -52,7 +52,7 @@ class _LoginViewState extends State<LoginView> {
                   ),
                   SizedBox(height: 10),
                   Text(
-                    "Selamat Datang Kembali",
+                    "Selamat Datang Kembali Di Toko J A Y A",
                     style: TextStyle(color: Colors.white, fontSize: 18),
                   ),
                 ],
