@@ -1,75 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:postman/models/response_data_list.dart';
 import 'package:postman/widgets/bottom_nav.dart';
+import 'package:postman/services/product_service.dart';
+import 'package:postman/models/product_model.dart';
+import 'package:cached_network_image/cached_network_image.dart'; 
 
-class KelolaView extends StatefulWidget {
-  const KelolaView({super.key});
+class ProductView extends StatefulWidget {
+  const ProductView({super.key});
 
   @override
-  State<KelolaView> createState() => _KelolaViewState();
+  State<ProductView> createState() => _ProductViewState();
 }
 
-class _KelolaViewState extends State<KelolaView> {
-  List<Map<String, dynamic>> _barangList = [
-    {
-      "id": 1,
-      "nama": "Semen Tiga Roda 40kg",
-      "stok": 150,
-      "satuan": "sak",
-      "harga": 65000,
-      "kategori": "Material Bangunan",
-      "supplier": "Supplier A",
-      "lokasi": "Gudang Utama",
-      "gambar":
-          "https://images.tokopedia.net/img/cache/700/VqbcmM/2021/1/26/2a1179ac-b77e-4139-9a0e-fd1ef262aefc.jpg", // Link gambar
-    },
-    {
-      "id": 2,
-      "nama": "Cat Tembok Dulux",
-      "stok": 75,
-      "satuan": "kaleng",
-      "harga": 185000,
-      "kategori": "Cat & Pelapis",
-      "supplier": "Supplier B",
-      "lokasi": "Rak Cat",
-      "gambar":
-          "https://images.tokopedia.net/img/cache/700/VqbcmM/2022/3/29/18d556a3-45dd-428d-8494-c08f2df91bd6.jpg",
-    },
-    {
-      "id": 3,
-      "nama": "Paku Beton 3 inch",
-      "stok": 5000,
-      "satuan": "kg",
-      "harga": 25000,
-      "kategori": "Perkakas",
-      "supplier": "Supplier C",
-      "lokasi": "Rak Perkakas",
-      "gambar":
-          "https://images.tokopedia.net/img/cache/700/hDjmkQ/2020/11/30/2a8a491e-9f99-4402-94ac-736b26af366d.jpg",
-    },
-    {
-      "id": 4,
-      "nama": "Keramik 40x40 Granit",
-      "stok": 800,
-      "satuan": "keping",
-      "harga": 45000,
-      "kategori": "Lantai & Dinding",
-      "supplier": "Supplier D",
-      "lokasi": "Gudang Keramik",
-      "gambar":
-          "https://images.tokopedia.net/img/cache/700/product-1/2020/6/30/68650798/68650798_8d0bcb81-0396-45ac-8d2a-cbc6764906e2_700_700.jpg",
-    },
-    {
-      "id": 5,
-      "nama": "Besi Beton 8mm",
-      "stok": 5,
-      "satuan": "batang",
-      "harga": 85000,
-      "kategori": "Material Bangunan",
-      "supplier": "Supplier E",
-      "lokasi": "Gudang Besi",
-      "gambar": "", // Kosong untuk demo
-    },
-  ];
+class _ProductViewState extends State<ProductView> {
+  ProductService productService = ProductService();
+  List<Product> products = [];
+
+  bool _isLoading = true;
+  String _errorMessage = '';
 
   final TextEditingController _searchController = TextEditingController();
   String _selectedKategori = "Semua";
@@ -83,18 +31,45 @@ class _KelolaViewState extends State<KelolaView> {
   bool _showStokRendah = false;
 
   @override
-  Widget build(BuildContext context) {
-    final filteredList = _getFilteredList();
-    final totalBarang = filteredList.length;
-    final totalStok = filteredList.fold<int>(
-      0,
-      (sum, item) => sum + (item['stok'] as int),
-    );
-    final totalNilai = filteredList.fold<double>(
-      0.0,
-      (sum, item) => sum + (item['stok'] * item['harga']),
-    );
+  void initState() {
+    super.initState();
+    _fetchProducts();
+  }
 
+  Future<void> _fetchProducts() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      final ResponseDataList<Product> response = await productService
+          .getProducts();
+
+      if (response.success) {
+        setState(() {
+          products = response.data ?? [];
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _errorMessage = response.message ?? 'Gagal mengambil data';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Terjadi kesalahan: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomNavHeight = 60.0;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kelola Barang Bangunan'),
@@ -114,12 +89,107 @@ class _KelolaViewState extends State<KelolaView> {
                 _selectedKategori = "Semua";
                 _showStokRendah = false;
               });
+              _fetchProducts();
             },
             tooltip: 'Refresh',
           ),
         ],
       ),
-      body: Column(
+      body: SafeArea(
+        bottom: false,
+        child: Container(
+          padding: EdgeInsets.only(
+           
+          ),
+          child: _buildBody(),
+        ),
+      ),
+      floatingActionButton: Container(
+        margin: const EdgeInsets.only(bottom: 50), 
+        child: FloatingActionButton.extended(
+          backgroundColor: Colors.green[800],
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text(
+            'Tambah Barang',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          onPressed: () => _showForm(null),
+        ),
+      ),
+      bottomNavigationBar: const BottomNav(1),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorMessage.isNotEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 60, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red, fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _fetchProducts,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Coba Lagi'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (products.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.inventory_outlined, size: 80, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text(
+              'Belum ada data barang',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              onPressed: _fetchProducts,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Muat Ulang'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return _buildLocalData();
+  }
+
+  Widget _buildLocalData() {
+    final filteredList = _getFilteredList();
+    final totalBarang = filteredList.length;
+    final totalStok = filteredList.fold<int>(
+      0,
+      (sum, product) => sum + product.stok,
+    );
+    final totalNilai = filteredList.fold<double>(
+      0.0,
+      (sum, product) => sum + (product.stok * product.harga),
+    );
+
+    return SingleChildScrollView(
+      child: Column(
         children: [
           // Header dengan statistik
           Container(
@@ -139,12 +209,12 @@ class _KelolaViewState extends State<KelolaView> {
                     _buildStatItem(
                       Icons.attach_money,
                       'Nilai',
-                      _formatCurrency(totalNilai as int),
+                      _formatCurrency(totalNilai.toInt()),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                // Search Bar
+                
                 TextField(
                   controller: _searchController,
                   onChanged: (_) => setState(() {}),
@@ -167,7 +237,7 @@ class _KelolaViewState extends State<KelolaView> {
             ),
           ),
 
-          // Filter Chips
+          
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
@@ -184,9 +254,7 @@ class _KelolaViewState extends State<KelolaView> {
                             selected: _selectedKategori == kategori,
                             onSelected: (selected) {
                               setState(() {
-                                _selectedKategori = selected
-                                    ? kategori
-                                    : "Semua";
+                                _selectedKategori = selected ? kategori : "Semua";
                               });
                             },
                             backgroundColor: Colors.grey[200],
@@ -222,30 +290,24 @@ class _KelolaViewState extends State<KelolaView> {
           ),
 
           // List Barang
-          Expanded(
-            child: filteredList.isEmpty
-                ? _buildEmptyState()
-                : ListView.builder(
-                    padding: const EdgeInsets.all(8),
-                    itemCount: filteredList.length,
-                    itemBuilder: (context, index) {
-                      final barang = filteredList[index];
-                      return _buildBarangCard(barang);
-                    },
-                  ),
-          ),
+          if (filteredList.isNotEmpty)
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 8),
+              itemCount: filteredList.length,
+              itemBuilder: (context, index) {
+                final product = filteredList[index];
+                return _buildBarangCard(product);
+              },
+            )
+          else
+            _buildEmptyState(),
+
+         
+          const SizedBox(height: 10),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: Colors.green[800],
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          'Tambah Barang',
-          style: TextStyle(color: Colors.white),
-        ),
-        onPressed: () => _showForm(null),
-      ),
-      bottomNavigationBar: const BottomNav(1),
     );
   }
 
@@ -281,10 +343,12 @@ class _KelolaViewState extends State<KelolaView> {
     );
   }
 
-  Widget _buildBarangCard(Map<String, dynamic> barang) {
-    bool stokRendah = barang['stok'] < 10;
-    bool hasImage =
-        barang['gambar'] != null && barang['gambar'].toString().isNotEmpty;
+  Widget _buildBarangCard(Product product) {
+    bool stokRendah = product.stok < 10;
+    bool hasImage = product.image.isNotEmpty;
+    String kategori = "Material Bangunan";
+    String supplier = product.namaBarang;
+    String satuan = "pcs";
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
@@ -297,13 +361,13 @@ class _KelolaViewState extends State<KelolaView> {
         ),
       ),
       child: InkWell(
-        onTap: () => _showDetailBarang(barang),
+        onTap: () => _showDetailBarang(product),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              // Gambar barang atau icon default
+              
               Container(
                 width: 60,
                 height: 60,
@@ -311,37 +375,18 @@ class _KelolaViewState extends State<KelolaView> {
                   borderRadius: BorderRadius.circular(10),
                   color: hasImage
                       ? Colors.transparent
-                      : _getKategoriColor(barang['kategori']).withOpacity(0.1),
+                      : _getKategoriColor(kategori).withOpacity(0.1),
                 ),
                 child: hasImage
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          barang['gambar'],
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return _buildPlaceholderIcon(barang['kategori']);
-                          },
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return Center(
-                              child: CircularProgressIndicator(
-                                value:
-                                    loadingProgress.expectedTotalBytes != null
-                                    ? loadingProgress.cumulativeBytesLoaded /
-                                          loadingProgress.expectedTotalBytes!
-                                    : null,
-                                strokeWidth: 2,
-                              ),
-                            );
-                          },
-                        ),
+                        child: _buildImageWidget(product.image, kategori),
                       )
-                    : _buildPlaceholderIcon(barang['kategori']),
+                    : _buildPlaceholderIcon(kategori),
               ),
               const SizedBox(width: 12),
 
-              // Info Barang
+           
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,7 +396,7 @@ class _KelolaViewState extends State<KelolaView> {
                       children: [
                         Expanded(
                           child: Text(
-                            barang['nama'],
+                            product.namaBarang,
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -366,16 +411,14 @@ class _KelolaViewState extends State<KelolaView> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: _getKategoriColor(
-                              barang['kategori'],
-                            ).withOpacity(0.1),
+                            color: _getKategoriColor(kategori).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            barang['kategori'],
+                            kategori,
                             style: TextStyle(
                               fontSize: 10,
-                              color: _getKategoriColor(barang['kategori']),
+                              color: _getKategoriColor(kategori),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -384,7 +427,7 @@ class _KelolaViewState extends State<KelolaView> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Supplier: ${barang['supplier']}',
+                      'Supplier: $supplier',
                       style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                     const SizedBox(height: 8),
@@ -395,7 +438,7 @@ class _KelolaViewState extends State<KelolaView> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _formatCurrency(barang['harga']),
+                              _formatCurrency(product.harga.toInt()),
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.green[800],
@@ -413,7 +456,7 @@ class _KelolaViewState extends State<KelolaView> {
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  '${barang['stok']} ${barang['satuan']}',
+                                  '${product.stok} $satuan',
                                   style: TextStyle(
                                     color: stokRendah
                                         ? Colors.orange[800]
@@ -434,18 +477,18 @@ class _KelolaViewState extends State<KelolaView> {
                                 icon: const Icon(Icons.image, size: 18),
                                 color: Colors.blue,
                                 onPressed: () =>
-                                    _showImageDialog(barang['gambar']),
+                                    _showImageDialog(product.image),
                                 tooltip: 'Lihat Gambar',
                               ),
                             IconButton(
                               icon: const Icon(Icons.edit, size: 20),
                               color: Colors.blue,
-                              onPressed: () => _showForm(barang['id']),
+                              onPressed: () => _showForm(product.id),
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete, size: 20),
                               color: Colors.red,
-                              onPressed: () => _deleteBarang(barang['id']),
+                              onPressed: () => _deleteBarang(product.id),
                             ),
                           ],
                         ),
@@ -461,6 +504,49 @@ class _KelolaViewState extends State<KelolaView> {
     );
   }
 
+  Widget _buildImageWidget(String imageUrl, String kategori) {
+    if (imageUrl.isEmpty || !imageUrl.startsWith("http")) {
+      return _buildPlaceholderIcon(kategori);
+    }
+    
+    try {
+      return CachedNetworkImage(
+        imageUrl: imageUrl,
+        fit: BoxFit.cover,
+        placeholder: (context, url) => Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              _getKategoriColor(kategori),
+            ),
+          ),
+        ),
+        errorWidget: (context, url, error) {
+          return _buildPlaceholderIcon(kategori);
+        },
+      );
+    } catch (e) {
+      return Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return _buildPlaceholderIcon(kategori);
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                _getKategoriColor(kategori),
+              ),
+            ),
+          );
+        },
+      );
+    }
+  }
+
   Widget _buildPlaceholderIcon(String kategori) {
     return Center(
       child: Icon(
@@ -472,7 +558,8 @@ class _KelolaViewState extends State<KelolaView> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
+    return Container(
+      padding: const EdgeInsets.all(20),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -503,45 +590,29 @@ class _KelolaViewState extends State<KelolaView> {
                 backgroundColor: Colors.green[800],
               ),
             ),
-          const SizedBox(height: 10),
-          TextButton.icon(
-            onPressed: () => _showForm(null),
-            icon: const Icon(Icons.add),
-            label: const Text('Tambah Barang Baru'),
-          ),
         ],
       ),
     );
   }
 
-  List<Map<String, dynamic>> _getFilteredList() {
-    List<Map<String, dynamic>> result = List.from(_barangList);
+  List<Product> _getFilteredList() {
+    List<Product> result = List.from(products);
 
-    // Filter pencarian
+
     if (_searchController.text.isNotEmpty) {
-      result = result.where((barang) {
-        return barang['nama'].toString().toLowerCase().contains(
+      result = result.where((product) {
+        return product.namaBarang.toLowerCase().contains(
               _searchController.text.toLowerCase(),
             ) ||
-            barang['kategori'].toString().toLowerCase().contains(
-              _searchController.text.toLowerCase(),
-            ) ||
-            barang['supplier'].toString().toLowerCase().contains(
+            product.deskripsi.toLowerCase().contains(
               _searchController.text.toLowerCase(),
             );
       }).toList();
     }
 
-    // Filter kategori
-    if (_selectedKategori != "Semua") {
-      result = result
-          .where((barang) => barang['kategori'] == _selectedKategori)
-          .toList();
-    }
-
-    // Filter stok rendah
+    
     if (_showStokRendah) {
-      result = result.where((barang) => barang['stok'] < 10).toList();
+      result = result.where((product) => product.stok < 10).toList();
     }
 
     return result;
@@ -612,37 +683,7 @@ class _KelolaViewState extends State<KelolaView> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.broken_image,
-                              size: 60,
-                              color: Colors.grey,
-                            ),
-                            SizedBox(height: 10),
-                            Text('Gagal memuat gambar'),
-                          ],
-                        ),
-                      );
-                    },
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                              : null,
-                        ),
-                      );
-                    },
-                  ),
+                  child: _buildImageWidget(imageUrl, "Material Bangunan"),
                 ),
               ),
               Padding(
@@ -665,69 +706,70 @@ class _KelolaViewState extends State<KelolaView> {
   void _showFilterOptions() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Filter Barang'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Kategori:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            DropdownButton<String>(
-              value: _selectedKategori,
-              isExpanded: true,
-              items: _kategoriList.map((kategori) {
-                return DropdownMenuItem(value: kategori, child: Text(kategori));
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedKategori = value!;
-                });
-                Navigator.pop(context);
-              },
-            ),
-            const SizedBox(height: 16),
-            SwitchListTile(
-              title: const Text('Tampilkan stok rendah (<10)'),
-              value: _showStokRendah,
-              onChanged: (value) {
-                setState(() {
-                  _showStokRendah = value;
-                });
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _selectedKategori = "Semua";
-                _showStokRendah = false;
-              });
-              Navigator.pop(context);
-            },
-            child: const Text('Reset Filter'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green[800]),
-            child: const Text(
-              'Terapkan',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Filter Barang'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Kategori:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  DropdownButton<String>(
+                    value: _selectedKategori,
+                    isExpanded: true,
+                    items: _kategoriList
+                        .map((k) => DropdownMenuItem(value: k, child: Text(k)))
+                        .toList(),
+                    onChanged: (value) {
+                      setDialogState(
+                        () => _selectedKategori = value!,
+                      );
+                      setState(() {});
+                    },
+                  ),
+                  SwitchListTile(
+                    title: const Text('Stok rendah (<10)'),
+                    value: _showStokRendah,
+                    onChanged: (value) {
+                      setDialogState(() => _showStokRendah = value);
+                      setState(() {});
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedKategori = "Semua";
+                      _showStokRendah = false;
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Reset'),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Terapkan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
-  void _showDetailBarang(Map<String, dynamic> barang) {
-    bool stokRendah = barang['stok'] < 10;
-    bool hasImage =
-        barang['gambar'] != null && barang['gambar'].toString().isNotEmpty;
+  void _showDetailBarang(Product product) {
+    bool stokRendah = product.stok < 10;
+    bool hasImage = product.image.isNotEmpty;
+    String kategori = "Material Bangunan";
+    String supplier = "Supplier";
+    String satuan = "pcs";
 
     showModalBottomSheet(
       context: context,
@@ -741,7 +783,7 @@ class _KelolaViewState extends State<KelolaView> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Gambar barang utama
+            
             if (hasImage)
               Container(
                 height: 200,
@@ -753,26 +795,7 @@ class _KelolaViewState extends State<KelolaView> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    barang['gambar'],
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _getKategoriIcon(barang['kategori']),
-                              size: 60,
-                              color: _getKategoriColor(barang['kategori']),
-                            ),
-                            const SizedBox(height: 10),
-                            const Text('Gambar tidak tersedia'),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                  child: _buildImageWidget(product.image, kategori),
                 ),
               ),
 
@@ -783,14 +806,12 @@ class _KelolaViewState extends State<KelolaView> {
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(
-                      color: _getKategoriColor(
-                        barang['kategori'],
-                      ).withOpacity(0.1),
+                      color: _getKategoriColor(kategori).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
-                      _getKategoriIcon(barang['kategori']),
-                      color: _getKategoriColor(barang['kategori']),
+                      _getKategoriIcon(kategori),
+                      color: _getKategoriColor(kategori),
                       size: 32,
                     ),
                   ),
@@ -800,7 +821,7 @@ class _KelolaViewState extends State<KelolaView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        barang['nama'],
+                        product.namaBarang,
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -813,15 +834,13 @@ class _KelolaViewState extends State<KelolaView> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: _getKategoriColor(
-                            barang['kategori'],
-                          ).withOpacity(0.1),
+                          color: _getKategoriColor(kategori).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          barang['kategori'],
+                          kategori,
                           style: TextStyle(
-                            color: _getKategoriColor(barang['kategori']),
+                            color: _getKategoriColor(kategori),
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -832,20 +851,20 @@ class _KelolaViewState extends State<KelolaView> {
               ],
             ),
             const SizedBox(height: 20),
-            _buildDetailItem(Icons.business, 'Supplier', barang['supplier']),
-            _buildDetailItem(Icons.location_on, 'Lokasi', barang['lokasi']),
+            _buildDetailItem(Icons.description, 'Deskripsi', product.deskripsi),
+            _buildDetailItem(Icons.business, 'Supplier', supplier),
             _buildDetailItem(
               Icons.inventory,
               'Stok',
-              '${barang['stok']} ${barang['satuan']}',
+              '${product.stok} $satuan',
             ),
             _buildDetailItem(
               Icons.attach_money,
               'Harga',
-              _formatCurrency(barang['harga']),
+              _formatCurrency(product.harga.toInt()),
             ),
 
-            // Link gambar jika ada
+       
             if (hasImage)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -862,11 +881,11 @@ class _KelolaViewState extends State<KelolaView> {
                             style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                           GestureDetector(
-                            onTap: () => _showImageDialog(barang['gambar']),
+                            onTap: () => _showImageDialog(product.image),
                             child: Text(
-                              barang['gambar'].length > 50
-                                  ? '${barang['gambar'].substring(0, 50)}...'
-                                  : barang['gambar'],
+                              product.image.length > 50
+                                  ? '${product.image.substring(0, 50)}...'
+                                  : product.image,
                               style: const TextStyle(
                                 fontSize: 14,
                                 color: Colors.blue,
@@ -885,7 +904,7 @@ class _KelolaViewState extends State<KelolaView> {
 
             const SizedBox(height: 20),
 
-            // Progress bar stok
+
             Container(
               height: 8,
               width: double.infinity,
@@ -893,19 +912,20 @@ class _KelolaViewState extends State<KelolaView> {
                 color: Colors.grey[200],
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: Stack(
-                children: [
-                  Container(
-                    height: 8,
-                    width:
-                        (barang['stok'] / 100) *
-                        MediaQuery.of(context).size.width,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  double percent = product.stok <= 0
+                      ? 0
+                      : (product.stok / 100).clamp(0.0, 1.0);
+
+                  return Container(
+                    width: constraints.maxWidth * percent,
                     decoration: BoxDecoration(
                       color: stokRendah ? Colors.orange : Colors.green,
                       borderRadius: BorderRadius.circular(4),
                     ),
-                  ),
-                ],
+                  );
+                },
               ),
             ),
 
@@ -924,7 +944,7 @@ class _KelolaViewState extends State<KelolaView> {
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () => _showForm(barang['id']),
+                    onPressed: () => _showForm(product.id),
                     icon: const Icon(Icons.edit, size: 18),
                     label: const Text('Edit Barang'),
                     style: ElevatedButton.styleFrom(
@@ -983,35 +1003,23 @@ class _KelolaViewState extends State<KelolaView> {
   }
 
   void _showForm(int? id) {
-    Map<String, dynamic>? barang;
-    if (id != null) {
-      barang = _barangList.firstWhere((b) => b['id'] == id);
-    }
-
-    final TextEditingController namaController = TextEditingController(
-      text: barang?['nama'],
-    );
-    final TextEditingController stokController = TextEditingController(
-      text: barang?['stok'].toString(),
-    );
+    final TextEditingController namaController = TextEditingController();
+    final TextEditingController stokController = TextEditingController();
     final TextEditingController satuanController = TextEditingController(
-      text: barang?['satuan'],
+      text: "pcs",
     );
-    final TextEditingController hargaController = TextEditingController(
-      text: barang?['harga'].toString(),
-    );
+    final TextEditingController hargaController = TextEditingController();
     final TextEditingController kategoriController = TextEditingController(
-      text: barang?['kategori'],
+      text: "Material Bangunan",
     );
     final TextEditingController supplierController = TextEditingController(
-      text: barang?['supplier'],
+      text: "Supplier",
     );
     final TextEditingController lokasiController = TextEditingController(
-      text: barang?['lokasi'],
+      text: "Gudang Utama",
     );
-    final TextEditingController gambarController = TextEditingController(
-      text: barang?['gambar'] ?? '',
-    );
+    final TextEditingController gambarController = TextEditingController();
+    final TextEditingController deskripsiController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
@@ -1019,273 +1027,174 @@ class _KelolaViewState extends State<KelolaView> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          top: 20,
-          left: 20,
-          right: 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  barang == null ? "Tambah Barang Baru" : "Edit Barang",
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            top: 20,
+            left: 20,
+            right: 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    id == null ? "Tambah Barang Baru" : "Edit Barang",
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
 
-            // Form fields
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Preview gambar jika ada
-                    if (gambarController.text.isNotEmpty)
-                      Container(
-                        height: 120,
-                        width: double.infinity,
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          color: Colors.grey[100],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            gambarController.text,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.broken_image,
-                                      size: 40,
-                                      color: Colors.grey,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Link gambar tidak valid',
-                                      style: TextStyle(color: Colors.grey[600]),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Center(
-                                child: CircularProgressIndicator(
-                                  value:
-                                      loadingProgress.expectedTotalBytes != null
-                                      ? loadingProgress.cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                      : null,
-                                  strokeWidth: 2,
-                                ),
-                              );
-                            },
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      if (gambarController.text.isNotEmpty)
+                        Container(
+                          height: 150,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.grey[200],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: _buildImageWidget(
+                                gambarController.text, "Material Bangunan"),
                           ),
                         ),
-                      ),
 
-                    TextField(
-                      controller: namaController,
-                      decoration: const InputDecoration(
-                        labelText: "Nama Barang",
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.construction),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: stokController,
-                            decoration: const InputDecoration(
-                              labelText: "Stok",
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.inventory),
-                            ),
-                            keyboardType: TextInputType.number,
-                          ),
+                      const SizedBox(height: 15),
+                      TextField(
+                        controller: namaController,
+                        decoration: const InputDecoration(
+                          labelText: "Nama Barang",
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.construction),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: satuanController,
-                            decoration: const InputDecoration(
-                              labelText: "Satuan",
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.scale),
+                      ),
+                      const SizedBox(height: 12),
+
+                      TextField(
+                        controller: deskripsiController,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: "Deskripsi",
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.description),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: stokController,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: "Stok",
+                                border: OutlineInputBorder(),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    TextField(
-                      controller: hargaController,
-                      decoration: const InputDecoration(
-                        labelText: "Harga (Rp)",
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.attach_money),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: satuanController,
+                              decoration: const InputDecoration(
+                                labelText: "Satuan",
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      keyboardType: TextInputType.number,
-                    ),
-                    const SizedBox(height: 12),
+                      const SizedBox(height: 12),
 
-                    TextField(
-                      controller: kategoriController,
-                      decoration: InputDecoration(
-                        labelText: "Kategori",
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.category),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.arrow_drop_down),
-                          onPressed: () {
-                            _showKategoriPicker(kategoriController);
-                          },
+                      TextField(
+                        controller: hargaController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: "Harga (Rp)",
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.attach_money),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
+                      const SizedBox(height: 12),
 
-                    TextField(
-                      controller: supplierController,
-                      decoration: const InputDecoration(
-                        labelText: "Supplier",
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.business),
+                      TextField(
+                        controller: gambarController,
+                        decoration: const InputDecoration(
+                          labelText: "Link Gambar (URL)",
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.link),
+                        ),
+                        onChanged: (value) {
+                          setModalState(() {});
+                        },
                       ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    TextField(
-                      controller: lokasiController,
-                      decoration: const InputDecoration(
-                        labelText: "Lokasi Gudang",
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.location_on),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    TextField(
-                      controller: gambarController,
-                      decoration: const InputDecoration(
-                        labelText: "Link Gambar (URL)",
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.link),
-                        hintText: "https://example.com/gambar.jpg",
-                        helperText: "Masukkan link gambar dari internet",
-                      ),
-                      onChanged: (_) {
-                        setState(() {});
-                      },
-                    ),
-                  ],
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 20),
-
-            // Action buttons
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green[800],
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                    ),
-                    onPressed: () {
-                      _saveBarang(
-                        id: id,
-                        nama: namaController.text,
-                        stok: int.tryParse(stokController.text) ?? 0,
-                        satuan: satuanController.text,
-                        harga: int.tryParse(hargaController.text) ?? 0,
-                        kategori: kategoriController.text,
-                        supplier: supplierController.text,
-                        lokasi: lokasiController.text,
-                        gambar: gambarController.text,
-                      );
-                      Navigator.pop(context);
-                    },
-                    child: Text(
-                      barang == null ? "TAMBAH BARANG" : "UPDATE",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[800],
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                  ),
+                  onPressed: () {
+                    _saveBarang(
+                      id: id,
+                      nama: namaController.text,
+                      deskripsi: deskripsiController.text,
+                      stok: int.tryParse(stokController.text) ?? 0,
+                      satuan: satuanController.text,
+                      harga: int.tryParse(hargaController.text) ?? 0,
+                      kategori: kategoriController.text,
+                      supplier: supplierController.text,
+                      lokasi: lokasiController.text,
+                      gambar: gambarController.text,
+                    );
+                    Navigator.pop(context);
+                  },
+                  child: Text(
+                    id == null ? "TAMBAH BARANG" : "UPDATE DATA",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 20),
-          ],
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  void _showKategoriPicker(TextEditingController controller) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Pilih Kategori',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            ..._kategoriList.where((k) => k != "Semua").map((kategori) {
-              return ListTile(
-                leading: Icon(
-                  _getKategoriIcon(kategori),
-                  color: _getKategoriColor(kategori),
-                ),
-                title: Text(kategori),
-                onTap: () {
-                  controller.text = kategori;
-                  Navigator.pop(context);
-                },
-              );
-            }).toList(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _saveBarang({
+  Future<void> _saveBarang({
     int? id,
     required String nama,
+    required String deskripsi,
     required int stok,
     required String satuan,
     required int harga,
@@ -1293,150 +1202,36 @@ class _KelolaViewState extends State<KelolaView> {
     required String supplier,
     required String lokasi,
     required String gambar,
-  }) {
-    setState(() {
-      if (id == null) {
-        // Tambah baru
-        int newId = _barangList.isEmpty ? 1 : _barangList.last['id'] + 1;
-        _barangList.add({
-          "id": newId,
-          "nama": nama,
-          "stok": stok,
-          "satuan": satuan,
-          "harga": harga,
-          "kategori": kategori,
-          "supplier": supplier,
-          "lokasi": lokasi,
-          "gambar": gambar,
-        });
-      } else {
-        // Edit existing
-        int index = _barangList.indexWhere((b) => b['id'] == id);
-        if (index != -1) {
-          _barangList[index] = {
-            "id": id,
-            "nama": nama,
-            "stok": stok,
-            "satuan": satuan,
-            "harga": harga,
-            "kategori": kategori,
-            "supplier": supplier,
-            "lokasi": lokasi,
-            "gambar": gambar,
-          };
-        }
-      }
-    });
+  }) async {
+    if (nama.isEmpty || harga <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nama dan harga harus diisi')),
+      );
+      return;
+    }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          id == null
-              ? "✅ Barang berhasil ditambahkan"
-              : "✅ Barang berhasil diperbarui",
-          style: const TextStyle(color: Colors.white),
+    _fetchProducts();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            id == null
+                ? 'Barang berhasil ditambahkan'
+                : 'Barang berhasil diupdate',
+          ),
         ),
-        backgroundColor: Colors.green[800],
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+      );
+    }
   }
 
-  void _deleteBarang(int id) {
-    final barang = _barangList.firstWhere((b) => b['id'] == id);
+  Future<void> _deleteBarang(int id) async {
+    _fetchProducts();
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hapus Barang'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Apakah Anda yakin ingin menghapus barang ini?'),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  // Tampilkan gambar thumbnail jika ada
-                  if (barang['gambar'] != null &&
-                      barang['gambar'].toString().isNotEmpty)
-                    Container(
-                      width: 40,
-                      height: 40,
-                      margin: const EdgeInsets.only(right: 10),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(6),
-                        color: Colors.grey[200],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: Image.network(
-                          barang['gambar'],
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              _getKategoriIcon(barang['kategori']),
-                              color: Colors.grey,
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          barang['nama'],
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          'Kategori: ${barang['kategori']}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('BATAL'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              setState(() {
-                _barangList.removeWhere((barang) => barang['id'] == id);
-              });
-              Navigator.pop(context);
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('❌ Barang berhasil dihapus'),
-                  backgroundColor: Colors.red,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            child: const Text('HAPUS', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Barang berhasil dihapus')),
+      );
+    }
   }
 }
