@@ -9,9 +9,7 @@ class PesanView extends StatefulWidget {
 }
 
 class _PesanViewState extends State<PesanView> {
-  // ======================
-  // DATA DUMMY PESANAN
-  // ======================
+
   final List<Map<String, dynamic>> _pesananList = [
     {
       "id": 1,
@@ -97,9 +95,7 @@ class _PesanViewState extends State<PesanView> {
     "Dibatalkan",
   ];
 
-  // ======================
-  // STATISTIK PESANAN
-  // ======================
+
   Map<String, int> get _statistics {
     return {
       'total': _pesananList.length,
@@ -117,9 +113,7 @@ class _PesanViewState extends State<PesanView> {
     super.dispose();
   }
 
-  // ======================
-  // BUILD UI
-  // ======================
+
   @override
   Widget build(BuildContext context) {
     final filteredList = _getFilteredList();
@@ -270,9 +264,6 @@ class _PesanViewState extends State<PesanView> {
             ),
           ),
 
-          // ======================
-          // LIST PESANAN
-          // ======================
           Expanded(
             child: filteredList.isEmpty
                 ? _buildEmptyState()

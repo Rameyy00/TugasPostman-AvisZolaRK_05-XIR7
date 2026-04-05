@@ -1,43 +1,39 @@
 class Product {
-  final int id;
+  final int? id;              // nullable untuk produk baru
   final String namaBarang;
   final String deskripsi;
-  final double harga;
+  final int harga;            // API mengembalikan harga sebagai integer
   final int stok;
-  final String image;
+  final String? image;        // URL lengkap
 
-  static String imageBaseUrl =
-      "https://learn.smktelkom-mlg.sch.id/toko";
+  static const String imageBaseUrl = "https://learn.smktelkom-mlg.sch.id/toko";
 
   Product({
-    required this.id,
+    this.id,
     required this.namaBarang,
     required this.deskripsi,
     required this.harga,
     required this.stok,
-    required this.image,
+    this.image,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
-    String imageUrl = '';
-
-    if (json['image'] != null && json['image'] != '') {
-      if (json['image'].toString().startsWith('http')) {
-        imageUrl = json['image'].toString();
+    String? imageUrl;
+    final rawImage = json['image']?.toString();
+    if (rawImage != null && rawImage.isNotEmpty) {
+      if (rawImage.startsWith('http')) {
+        imageUrl = rawImage;
       } else {
-        String imagePath = json['image'].toString();
-        if (imagePath.startsWith('/')) {
-          imagePath = imagePath.substring(1);
-        }
-        imageUrl = "$imageBaseUrl/$imagePath";
+        final path = rawImage.startsWith('/') ? rawImage.substring(1) : rawImage;
+        imageUrl = "$imageBaseUrl/$path";
       }
     }
 
     return Product(
-      id: json['id'] ?? 0,
+      id: json['id'] as int?,
       namaBarang: json['nama_barang'] ?? '',
       deskripsi: json['deskripsi'] ?? '',
-      harga: double.tryParse(json['harga'].toString()) ?? 0.0,
+      harga: int.tryParse(json['harga'].toString()) ?? 0,
       stok: int.tryParse(json['stok'].toString()) ?? 0,
       image: imageUrl,
     );

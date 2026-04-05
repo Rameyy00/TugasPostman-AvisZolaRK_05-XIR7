@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:postman/models/response_data_list.dart';
+import 'package:postman/views/tambahmovie.dart';
 import 'package:postman/widgets/bottom_nav.dart';
 import 'package:postman/services/product_service.dart';
 import 'package:postman/models/product_model.dart';
-import 'package:cached_network_image/cached_network_image.dart'; 
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ProductView extends StatefulWidget {
   const ProductView({super.key});
@@ -13,6 +14,7 @@ class ProductView extends StatefulWidget {
 }
 
 class _ProductViewState extends State<ProductView> {
+  final List<String> _actions = ["Update", "Delete"];
   ProductService productService = ProductService();
   List<Product> products = [];
 
@@ -69,12 +71,10 @@ class _ProductViewState extends State<ProductView> {
   Widget build(BuildContext context) {
     final bottomNavHeight = 60.0;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kelola Barang Bangunan'),
-        backgroundColor: Colors.green[800],
-        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_alt),
@@ -94,33 +94,45 @@ class _ProductViewState extends State<ProductView> {
             tooltip: 'Refresh',
           ),
         ],
+
+        backgroundColor: Colors.green[800],
+        foregroundColor: Colors.white,
+        // actions: [
+
+        // ],
       ),
       body: SafeArea(
         bottom: false,
-        child: Container(
-          padding: EdgeInsets.only(
-           
-          ),
-          child: _buildBody(),
-        ),
+        child: Container(padding: EdgeInsets.only(), child: _buildBody()),
       ),
       floatingActionButton: Container(
-        margin: const EdgeInsets.only(bottom: 50), 
+        margin: const EdgeInsets.only(bottom: 70),
         child: FloatingActionButton.extended(
           backgroundColor: Colors.green[800],
           icon: const Icon(Icons.add, color: Colors.white),
           label: const Text(
             'Tambah Barang',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
-          onPressed: () => _showForm(null),
+          onPressed: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    tambahBarang(title: "Tambah Barang", item: null),
+              ),
+            );
+            // Jika hasilnya true, refresh data otomatis
+            if (result == true) {
+              _fetchProducts();
+            }
+          },
         ),
       ),
-      bottomNavigationBar: const BottomNav(1),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      bottomNavigationBar: BottomNav(1),
     );
+    
   }
 
   Widget _buildBody() {
@@ -191,7 +203,6 @@ class _ProductViewState extends State<ProductView> {
     return SingleChildScrollView(
       child: Column(
         children: [
-          // Header dengan statistik
           Container(
             padding: const EdgeInsets.all(16),
             color: Colors.green[50],
@@ -214,7 +225,7 @@ class _ProductViewState extends State<ProductView> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                
+
                 TextField(
                   controller: _searchController,
                   onChanged: (_) => setState(() {}),
@@ -237,7 +248,6 @@ class _ProductViewState extends State<ProductView> {
             ),
           ),
 
-          
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
@@ -254,7 +264,9 @@ class _ProductViewState extends State<ProductView> {
                             selected: _selectedKategori == kategori,
                             onSelected: (selected) {
                               setState(() {
-                                _selectedKategori = selected ? kategori : "Semua";
+                                _selectedKategori = selected
+                                    ? kategori
+                                    : "Semua";
                               });
                             },
                             backgroundColor: Colors.grey[200],
@@ -289,7 +301,6 @@ class _ProductViewState extends State<ProductView> {
             ),
           ),
 
-          // List Barang
           if (filteredList.isNotEmpty)
             ListView.builder(
               shrinkWrap: true,
@@ -304,7 +315,6 @@ class _ProductViewState extends State<ProductView> {
           else
             _buildEmptyState(),
 
-         
           const SizedBox(height: 10),
         ],
       ),
@@ -345,10 +355,10 @@ class _ProductViewState extends State<ProductView> {
 
   Widget _buildBarangCard(Product product) {
     bool stokRendah = product.stok < 10;
-    bool hasImage = product.image.isNotEmpty;
-    String kategori = "Material Bangunan";
-    String supplier = product.namaBarang;
-    String satuan = "pcs";
+    bool hasImage = product.image!.isNotEmpty;
+    String kategori = product.namaBarang ?? "Material Bangunan";
+    String supplier = product.deskripsi ?? "Supplier";
+    Object satuan = product.stok ?? "pcs";
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
@@ -367,7 +377,7 @@ class _ProductViewState extends State<ProductView> {
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              
+              // Image / placeholder
               Container(
                 width: 60,
                 height: 60,
@@ -380,13 +390,12 @@ class _ProductViewState extends State<ProductView> {
                 child: hasImage
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: _buildImageWidget(product.image, kategori),
+                        child: _buildImageWidget(product.image ?? '', kategori),
                       )
                     : _buildPlaceholderIcon(kategori),
               ),
               const SizedBox(width: 12),
 
-           
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -476,19 +485,35 @@ class _ProductViewState extends State<ProductView> {
                               IconButton(
                                 icon: const Icon(Icons.image, size: 18),
                                 color: Colors.blue,
-                                onPressed: () =>
-                                    _showImageDialog(product.image),
+                                onPressed: () {
+                                  if (product.image != null &&
+                                      product.image!.isNotEmpty) {
+                                    _showImageDialog(product.image!);
+                                  }
+                                },
                                 tooltip: 'Lihat Gambar',
                               ),
-                            IconButton(
-                              icon: const Icon(Icons.edit, size: 20),
-                              color: Colors.blue,
-                              onPressed: () => _showForm(product.id),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, size: 20),
-                              color: Colors.red,
-                              onPressed: () => _deleteBarang(product.id),
+                            PopupMenuButton<String>(
+                              icon: const Icon(Icons.more_vert),
+                              itemBuilder: (context) {
+                                return _actions.map((action) {
+                                  return PopupMenuItem<String>(
+                                    value: action,
+                                    child: Text(action),
+                                    onTap: () {
+                                      if (action == "Update") {
+                                        _showForm(
+                                          product.id ?? 0,
+                                        ); // edit bottom sheet
+                                      } else if (action == "Delete") {
+                                        _deleteBarang(
+                                          product.id ?? 0,
+                                        ); // calls confirmation dialog
+                                      }
+                                    },
+                                  );
+                                }).toList();
+                              },
                             ),
                           ],
                         ),
@@ -508,7 +533,7 @@ class _ProductViewState extends State<ProductView> {
     if (imageUrl.isEmpty || !imageUrl.startsWith("http")) {
       return _buildPlaceholderIcon(kategori);
     }
-    
+
     try {
       return CachedNetworkImage(
         imageUrl: imageUrl,
@@ -598,7 +623,6 @@ class _ProductViewState extends State<ProductView> {
   List<Product> _getFilteredList() {
     List<Product> result = List.from(products);
 
-
     if (_searchController.text.isNotEmpty) {
       result = result.where((product) {
         return product.namaBarang.toLowerCase().contains(
@@ -610,7 +634,6 @@ class _ProductViewState extends State<ProductView> {
       }).toList();
     }
 
-    
     if (_showStokRendah) {
       result = result.where((product) => product.stok < 10).toList();
     }
@@ -725,9 +748,7 @@ class _ProductViewState extends State<ProductView> {
                         .map((k) => DropdownMenuItem(value: k, child: Text(k)))
                         .toList(),
                     onChanged: (value) {
-                      setDialogState(
-                        () => _selectedKategori = value!,
-                      );
+                      setDialogState(() => _selectedKategori = value!);
                       setState(() {});
                     },
                   ),
@@ -766,7 +787,7 @@ class _ProductViewState extends State<ProductView> {
 
   void _showDetailBarang(Product product) {
     bool stokRendah = product.stok < 10;
-    bool hasImage = product.image.isNotEmpty;
+    bool hasImage = product.image!.isNotEmpty;
     String kategori = "Material Bangunan";
     String supplier = "Supplier";
     String satuan = "pcs";
@@ -783,7 +804,6 @@ class _ProductViewState extends State<ProductView> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            
             if (hasImage)
               Container(
                 height: 200,
@@ -795,7 +815,7 @@ class _ProductViewState extends State<ProductView> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: _buildImageWidget(product.image, kategori),
+                  child: _buildImageWidget(product.image ?? '', kategori),
                 ),
               ),
 
@@ -864,7 +884,6 @@ class _ProductViewState extends State<ProductView> {
               _formatCurrency(product.harga.toInt()),
             ),
 
-       
             if (hasImage)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -881,11 +900,16 @@ class _ProductViewState extends State<ProductView> {
                             style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                           GestureDetector(
-                            onTap: () => _showImageDialog(product.image),
+                            onTap: () {
+                              if (product.image != null &&
+                                  product.image!.isNotEmpty) {
+                                _showImageDialog(product.image!);
+                              }
+                            },
                             child: Text(
-                              product.image.length > 50
-                                  ? '${product.image.substring(0, 50)}...'
-                                  : product.image,
+                              product.image!.length > 50
+                                  ? '${product.image?.substring(0, 50)}...'
+                                  : product.image ?? '',
                               style: const TextStyle(
                                 fontSize: 14,
                                 color: Colors.blue,
@@ -903,7 +927,6 @@ class _ProductViewState extends State<ProductView> {
               ),
 
             const SizedBox(height: 20),
-
 
             Container(
               height: 8,
@@ -1072,7 +1095,9 @@ class _ProductViewState extends State<ProductView> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: _buildImageWidget(
-                                gambarController.text, "Material Bangunan"),
+                              gambarController.text,
+                              "Material Bangunan",
+                            ),
                           ),
                         ),
 
@@ -1226,12 +1251,50 @@ class _ProductViewState extends State<ProductView> {
   }
 
   Future<void> _deleteBarang(int id) async {
-    _fetchProducts();
+    // Konfirmasi hapus
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Konfirmasi Hapus'),
+        content: const Text('Apakah Anda yakin ingin menghapus barang ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Barang berhasil dihapus')),
-      );
+    // Tampilkan loading
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await productService.deleteProduct(id);
+      if (response.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Barang berhasil dihapus')),
+        );
+        await _fetchProducts(); // refresh data
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response.message ?? 'Gagal menghapus barang')),
+        );
+        // jika gagal, tetap matikan loading
+        if (mounted) setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 }

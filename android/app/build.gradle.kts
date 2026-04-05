@@ -6,9 +6,10 @@ plugins {
 }
 
 android {
-    namespace = "com.example.postman"
+    // 1. Namespace cukup dideklarasikan satu kali di sini
+    namespace = "com.example.postman" 
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -19,6 +20,7 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
+    // 3. defaultConfig cukup satu blok saja
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.postman"

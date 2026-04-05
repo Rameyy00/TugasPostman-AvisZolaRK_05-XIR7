@@ -122,7 +122,7 @@ class _LoginViewState extends State<LoginView> {
                         ),
                         const SizedBox(height: 40),
 
-                        // Tombol Login
+                      
                         SizedBox(
                           width: double.infinity,
                           height: 50,

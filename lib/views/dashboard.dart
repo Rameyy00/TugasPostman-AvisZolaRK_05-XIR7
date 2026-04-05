@@ -137,7 +137,6 @@ class _DashboardViewState extends State<DashboardView> {
         safeValue = double.tryParse(value) ?? 0.0;
       }
 
-      // Pastikan nilai tidak negatif
       if (safeValue.isNegative || safeValue.isNaN || safeValue.isInfinite) {
         safeValue = 0.0;
       }
@@ -302,7 +301,7 @@ class _DashboardViewState extends State<DashboardView> {
               SliverToBoxAdapter(
                 child: Container(
                   padding: EdgeInsets.only(
-                    bottom: bottomNavHeight + bottomPadding + 20, // Tambahkan padding untuk bottom nav
+                    bottom: bottomNavHeight + bottomPadding + 20,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -551,7 +550,7 @@ class _DashboardViewState extends State<DashboardView> {
                                     lineHeight: 20,
                                     animationDuration: 2000,
                                     percent: 0.75,
-                                    center: const Text("75%"),
+                                  
                                     progressColor: Colors.green,
                                     backgroundColor: Colors.grey.shade200,
                                     barRadius: const Radius.circular(10),
