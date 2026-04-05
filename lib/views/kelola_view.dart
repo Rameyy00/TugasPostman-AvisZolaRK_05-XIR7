@@ -15,7 +15,7 @@ class ProductView extends StatefulWidget {
 
 class _ProductViewState extends State<ProductView> {
   final List<String> _actions = ["Update", "Delete"];
-  ProductService productService = ProductService();
+  final ProductService productService = ProductService();
   List<Product> products = [];
 
   bool _isLoading = true;
@@ -23,7 +23,7 @@ class _ProductViewState extends State<ProductView> {
 
   final TextEditingController _searchController = TextEditingController();
   String _selectedKategori = "Semua";
-  List<String> _kategoriList = [
+  final List<String> _kategoriList = [
     "Semua",
     "Material Bangunan",
     "Cat & Pelapis",
@@ -47,7 +47,6 @@ class _ProductViewState extends State<ProductView> {
     try {
       final ResponseDataList<Product> response = await productService
           .getProducts();
-
       if (response.success) {
         setState(() {
           products = response.data ?? [];
@@ -69,9 +68,6 @@ class _ProductViewState extends State<ProductView> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomNavHeight = 60.0;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kelola Barang Bangunan'),
@@ -94,17 +90,10 @@ class _ProductViewState extends State<ProductView> {
             tooltip: 'Refresh',
           ),
         ],
-
         backgroundColor: Colors.green[800],
         foregroundColor: Colors.white,
-        // actions: [
-
-        // ],
       ),
-      body: SafeArea(
-        bottom: false,
-        child: Container(padding: EdgeInsets.only(), child: _buildBody()),
-      ),
+      body: SafeArea(bottom: false, child: _buildBody()),
       floatingActionButton: Container(
         margin: const EdgeInsets.only(bottom: 70),
         child: FloatingActionButton.extended(
@@ -122,24 +111,19 @@ class _ProductViewState extends State<ProductView> {
                     tambahBarang(title: "Tambah Barang", item: null),
               ),
             );
-            // Jika hasilnya true, refresh data otomatis
-            if (result == true) {
-              _fetchProducts();
-            }
+            if (result == true) _fetchProducts();
           },
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: BottomNav(1),
     );
-    
   }
 
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-
     if (_errorMessage.isNotEmpty) {
       return Center(
         child: Column(
@@ -162,7 +146,6 @@ class _ProductViewState extends State<ProductView> {
         ),
       );
     }
-
     if (products.isEmpty) {
       return Center(
         child: Column(
@@ -184,7 +167,6 @@ class _ProductViewState extends State<ProductView> {
         ),
       );
     }
-
     return _buildLocalData();
   }
 
@@ -225,7 +207,6 @@ class _ProductViewState extends State<ProductView> {
                   ],
                 ),
                 const SizedBox(height: 12),
-
                 TextField(
                   controller: _searchController,
                   onChanged: (_) => setState(() {}),
@@ -247,7 +228,6 @@ class _ProductViewState extends State<ProductView> {
               ],
             ),
           ),
-
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
@@ -300,21 +280,17 @@ class _ProductViewState extends State<ProductView> {
               ],
             ),
           ),
-
           if (filteredList.isNotEmpty)
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               padding: const EdgeInsets.only(bottom: 8),
               itemCount: filteredList.length,
-              itemBuilder: (context, index) {
-                final product = filteredList[index];
-                return _buildBarangCard(product);
-              },
+              itemBuilder: (context, index) =>
+                  _buildBarangCard(filteredList[index]),
             )
           else
             _buildEmptyState(),
-
           const SizedBox(height: 10),
         ],
       ),
@@ -354,11 +330,11 @@ class _ProductViewState extends State<ProductView> {
   }
 
   Widget _buildBarangCard(Product product) {
-    bool stokRendah = product.stok < 10;
-    bool hasImage = product.image!.isNotEmpty;
-    String kategori = product.namaBarang ?? "Material Bangunan";
-    String supplier = product.deskripsi ?? "Supplier";
-    Object satuan = product.stok ?? "pcs";
+    final stokRendah = product.stok < 10;
+    final hasImage = product.image?.isNotEmpty ?? false;
+    final kategori = product.namaBarang ?? "Material Bangunan";
+    final supplier = product.deskripsi ?? "Supplier";
+    final satuan = "pcs";
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
@@ -377,7 +353,6 @@ class _ProductViewState extends State<ProductView> {
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              // Image / placeholder
               Container(
                 width: 60,
                 height: 60,
@@ -390,12 +365,11 @@ class _ProductViewState extends State<ProductView> {
                 child: hasImage
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: _buildImageWidget(product.image ?? '', kategori),
+                        child: _buildImageWidget(product.image!, kategori),
                       )
                     : _buildPlaceholderIcon(kategori),
               ),
               const SizedBox(width: 12),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -485,35 +459,25 @@ class _ProductViewState extends State<ProductView> {
                               IconButton(
                                 icon: const Icon(Icons.image, size: 18),
                                 color: Colors.blue,
-                                onPressed: () {
-                                  if (product.image != null &&
-                                      product.image!.isNotEmpty) {
-                                    _showImageDialog(product.image!);
-                                  }
-                                },
+                                onPressed: () =>
+                                    _showImageDialog(product.image!),
                                 tooltip: 'Lihat Gambar',
                               ),
                             PopupMenuButton<String>(
                               icon: const Icon(Icons.more_vert),
-                              itemBuilder: (context) {
-                                return _actions.map((action) {
-                                  return PopupMenuItem<String>(
-                                    value: action,
-                                    child: Text(action),
-                                    onTap: () {
-                                      if (action == "Update") {
-                                        _showForm(
-                                          product.id ?? 0,
-                                        ); // edit bottom sheet
-                                      } else if (action == "Delete") {
-                                        _deleteBarang(
-                                          product.id ?? 0,
-                                        ); // calls confirmation dialog
-                                      }
-                                    },
-                                  );
-                                }).toList();
-                              },
+                              itemBuilder: (context) => _actions.map((action) {
+                                return PopupMenuItem<String>(
+                                  value: action,
+                                  child: Text(action),
+                                  onTap: () {
+                                    if (action == "Update") {
+                                      _showForm(product);
+                                    } else if (action == "Delete") {
+                                      _deleteBarang(product.id ?? 0);
+                                    }
+                                  },
+                                );
+                              }).toList(),
                             ),
                           ],
                         ),
@@ -533,7 +497,6 @@ class _ProductViewState extends State<ProductView> {
     if (imageUrl.isEmpty || !imageUrl.startsWith("http")) {
       return _buildPlaceholderIcon(kategori);
     }
-
     try {
       return CachedNetworkImage(
         imageUrl: imageUrl,
@@ -546,17 +509,14 @@ class _ProductViewState extends State<ProductView> {
             ),
           ),
         ),
-        errorWidget: (context, url, error) {
-          return _buildPlaceholderIcon(kategori);
-        },
+        errorWidget: (context, url, error) => _buildPlaceholderIcon(kategori),
       );
     } catch (e) {
       return Image.network(
         imageUrl,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return _buildPlaceholderIcon(kategori);
-        },
+        errorBuilder: (context, error, stackTrace) =>
+            _buildPlaceholderIcon(kategori),
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
           return Center(
@@ -622,7 +582,6 @@ class _ProductViewState extends State<ProductView> {
 
   List<Product> _getFilteredList() {
     List<Product> result = List.from(products);
-
     if (_searchController.text.isNotEmpty) {
       result = result.where((product) {
         return product.namaBarang.toLowerCase().contains(
@@ -633,11 +592,9 @@ class _ProductViewState extends State<ProductView> {
             );
       }).toList();
     }
-
     if (_showStokRendah) {
       result = result.where((product) => product.stok < 10).toList();
     }
-
     return result;
   }
 
@@ -786,11 +743,11 @@ class _ProductViewState extends State<ProductView> {
   }
 
   void _showDetailBarang(Product product) {
-    bool stokRendah = product.stok < 10;
-    bool hasImage = product.image!.isNotEmpty;
-    String kategori = "Material Bangunan";
-    String supplier = "Supplier";
-    String satuan = "pcs";
+    final stokRendah = product.stok < 10;
+    final hasImage = product.image?.isNotEmpty ?? false;
+    const kategori = "Material Bangunan";
+    const supplier = "Supplier";
+    const satuan = "pcs";
 
     showModalBottomSheet(
       context: context,
@@ -815,10 +772,9 @@ class _ProductViewState extends State<ProductView> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: _buildImageWidget(product.image ?? '', kategori),
+                  child: _buildImageWidget(product.image!, kategori),
                 ),
               ),
-
             Row(
               children: [
                 if (!hasImage)
@@ -883,7 +839,6 @@ class _ProductViewState extends State<ProductView> {
               'Harga',
               _formatCurrency(product.harga.toInt()),
             ),
-
             if (hasImage)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -900,16 +855,11 @@ class _ProductViewState extends State<ProductView> {
                             style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                           GestureDetector(
-                            onTap: () {
-                              if (product.image != null &&
-                                  product.image!.isNotEmpty) {
-                                _showImageDialog(product.image!);
-                              }
-                            },
+                            onTap: () => _showImageDialog(product.image!),
                             child: Text(
                               product.image!.length > 50
-                                  ? '${product.image?.substring(0, 50)}...'
-                                  : product.image ?? '',
+                                  ? '${product.image!.substring(0, 50)}...'
+                                  : product.image!,
                               style: const TextStyle(
                                 fontSize: 14,
                                 color: Colors.blue,
@@ -925,9 +875,7 @@ class _ProductViewState extends State<ProductView> {
                   ],
                 ),
               ),
-
             const SizedBox(height: 20),
-
             Container(
               height: 8,
               width: double.infinity,
@@ -937,10 +885,9 @@ class _ProductViewState extends State<ProductView> {
               ),
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  double percent = product.stok <= 0
+                  final percent = product.stok <= 0
                       ? 0
                       : (product.stok / 100).clamp(0.0, 1.0);
-
                   return Container(
                     width: constraints.maxWidth * percent,
                     decoration: BoxDecoration(
@@ -951,7 +898,6 @@ class _ProductViewState extends State<ProductView> {
                 },
               ),
             ),
-
             const SizedBox(height: 10),
             Text(
               stokRendah ? '⚠️ Stok rendah, segera restok!' : 'Stok aman',
@@ -960,14 +906,15 @@ class _ProductViewState extends State<ProductView> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(height: 30),
-
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () => _showForm(product.id),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showForm(product);
+                    },
                     icon: const Icon(Icons.edit, size: 18),
                     label: const Text('Edit Barang'),
                     style: ElevatedButton.styleFrom(
@@ -1025,24 +972,21 @@ class _ProductViewState extends State<ProductView> {
     );
   }
 
-  void _showForm(int? id) {
-    final TextEditingController namaController = TextEditingController();
-    final TextEditingController stokController = TextEditingController();
-    final TextEditingController satuanController = TextEditingController(
-      text: "pcs",
+  void _showForm(Product? product) {
+    final namaController = TextEditingController(
+      text: product?.namaBarang ?? '',
     );
-    final TextEditingController hargaController = TextEditingController();
-    final TextEditingController kategoriController = TextEditingController(
-      text: "Material Bangunan",
+    final stokController = TextEditingController(
+      text: product?.stok.toString() ?? '',
     );
-    final TextEditingController supplierController = TextEditingController(
-      text: "Supplier",
+    final satuanController = TextEditingController(text: 'pcs');
+    final hargaController = TextEditingController(
+      text: product?.harga.toString() ?? '',
     );
-    final TextEditingController lokasiController = TextEditingController(
-      text: "Gudang Utama",
+    final deskripsiController = TextEditingController(
+      text: product?.deskripsi ?? '',
     );
-    final TextEditingController gambarController = TextEditingController();
-    final TextEditingController deskripsiController = TextEditingController();
+    final gambarController = TextEditingController(text: product?.image ?? '');
 
     showModalBottomSheet(
       context: context,
@@ -1066,7 +1010,7 @@ class _ProductViewState extends State<ProductView> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    id == null ? "Tambah Barang Baru" : "Edit Barang",
+                    product == null ? "Tambah Barang Baru" : "Edit Barang",
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -1079,7 +1023,6 @@ class _ProductViewState extends State<ProductView> {
                 ],
               ),
               const SizedBox(height: 10),
-
               Flexible(
                 child: SingleChildScrollView(
                   child: Column(
@@ -1100,7 +1043,6 @@ class _ProductViewState extends State<ProductView> {
                             ),
                           ),
                         ),
-
                       const SizedBox(height: 15),
                       TextField(
                         controller: namaController,
@@ -1111,7 +1053,6 @@ class _ProductViewState extends State<ProductView> {
                         ),
                       ),
                       const SizedBox(height: 12),
-
                       TextField(
                         controller: deskripsiController,
                         maxLines: 2,
@@ -1122,7 +1063,6 @@ class _ProductViewState extends State<ProductView> {
                         ),
                       ),
                       const SizedBox(height: 12),
-
                       Row(
                         children: [
                           Expanded(
@@ -1148,7 +1088,6 @@ class _ProductViewState extends State<ProductView> {
                         ],
                       ),
                       const SizedBox(height: 12),
-
                       TextField(
                         controller: hargaController,
                         keyboardType: TextInputType.number,
@@ -1159,7 +1098,6 @@ class _ProductViewState extends State<ProductView> {
                         ),
                       ),
                       const SizedBox(height: 12),
-
                       TextField(
                         controller: gambarController,
                         decoration: const InputDecoration(
@@ -1167,16 +1105,13 @@ class _ProductViewState extends State<ProductView> {
                           border: OutlineInputBorder(),
                           prefixIcon: Icon(Icons.link),
                         ),
-                        onChanged: (value) {
-                          setModalState(() {});
-                        },
+                        onChanged: (value) => setModalState(() {}),
                       ),
                       const SizedBox(height: 20),
                     ],
                   ),
                 ),
               ),
-
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -1184,23 +1119,42 @@ class _ProductViewState extends State<ProductView> {
                     backgroundColor: Colors.green[800],
                     padding: const EdgeInsets.symmetric(vertical: 15),
                   ),
-                  onPressed: () {
-                    _saveBarang(
-                      id: id,
+                  onPressed: () async {
+                    if (namaController.text.isEmpty ||
+                        hargaController.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Nama dan harga harus diisi'),
+                        ),
+                      );
+                      return;
+                    }
+                    final stok = int.tryParse(stokController.text) ?? 0;
+                    final harga = int.tryParse(hargaController.text) ?? 0;
+                    if (harga <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Harga harus lebih dari 0'),
+                        ),
+                      );
+                      return;
+                    }
+                    await _saveBarang(
+                      id: product?.id,
                       nama: namaController.text,
                       deskripsi: deskripsiController.text,
-                      stok: int.tryParse(stokController.text) ?? 0,
+                      stok: stok,
                       satuan: satuanController.text,
-                      harga: int.tryParse(hargaController.text) ?? 0,
-                      kategori: kategoriController.text,
-                      supplier: supplierController.text,
-                      lokasi: lokasiController.text,
+                      harga: harga,
+                      kategori: "Material Bangunan",
+                      supplier: "Supplier",
+                      lokasi: "Gudang Utama",
                       gambar: gambarController.text,
                     );
                     Navigator.pop(context);
                   },
                   child: Text(
-                    id == null ? "TAMBAH BARANG" : "UPDATE DATA",
+                    product == null ? "TAMBAH BARANG" : "UPDATE DATA",
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -1216,6 +1170,49 @@ class _ProductViewState extends State<ProductView> {
     );
   }
 
+  Future<void> _deleteBarang(int productId) async {
+    if (productId == 0) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus Barang'),
+        content: const Text('Apakah Anda yakin ingin menghapus barang ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final response = await productService.deleteProduct(productId);
+      if (response.message?.toLowerCase().contains('sukses') ?? false) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Barang berhasil dihapus')),
+        );
+        await _fetchProducts();
+      } else {
+        throw Exception(response.message ?? 'Gagal menghapus barang');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
   Future<void> _saveBarang({
     int? id,
     required String nama,
@@ -1228,73 +1225,61 @@ class _ProductViewState extends State<ProductView> {
     required String lokasi,
     required String gambar,
   }) async {
-    if (nama.isEmpty || harga <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nama dan harga harus diisi')),
-      );
-      return;
-    }
-
-    _fetchProducts();
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            id == null
-                ? 'Barang berhasil ditambahkan'
-                : 'Barang berhasil diupdate',
-          ),
-        ),
-      );
-    }
-  }
-
-  Future<void> _deleteBarang(int id) async {
-    // Konfirmasi hapus
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Konfirmasi Hapus'),
-        content: const Text('Apakah Anda yakin ingin menghapus barang ini?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
-    );
-    if (confirm != true) return;
-
-    // Tampilkan loading
-    setState(() {
-      _isLoading = true;
-    });
-
+    setState(() => _isLoading = true);
     try {
-      final response = await productService.deleteProduct(id);
-      if (response.success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Barang berhasil dihapus')),
+      if (id == null) {
+        final newProduct = Product(
+          id: null,
+          namaBarang: nama,
+          deskripsi: deskripsi,
+          stok: stok,
+          harga: harga,
+          image: gambar.isNotEmpty ? gambar : null,
         );
-        await _fetchProducts(); // refresh data
+        final response = await productService.addProduct(newProduct);
+        // Gunakan response.status (bukan response.success)
+        if (response.status == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Barang berhasil ditambahkan')),
+          );
+          await _fetchProducts();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response.message ?? 'Gagal menambah barang'),
+            ),
+          );
+          setState(() => _isLoading = false);
+        }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response.message ?? 'Gagal menghapus barang')),
+        final updatedProduct = Product(
+          id: id,
+          namaBarang: nama,
+          deskripsi: deskripsi,
+          stok: stok,
+          harga: harga,
+          image: gambar.isNotEmpty ? gambar : null,
         );
-        // jika gagal, tetap matikan loading
-        if (mounted) setState(() => _isLoading = false);
+        final response = await productService.updateProduct(updatedProduct);
+        if (response.status == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Barang berhasil diupdate')),
+          );
+          await _fetchProducts();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response.message ?? 'Gagal mengupdate barang'),
+            ),
+          );
+          setState(() => _isLoading = false);
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
-      if (mounted) setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
     }
   }
 }
