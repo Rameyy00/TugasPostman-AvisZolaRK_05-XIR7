@@ -1196,7 +1196,7 @@ class _ProductViewState extends State<ProductView> {
     setState(() => _isLoading = true);
     try {
       final response = await productService.deleteProduct(productId);
-      if (response.message?.toLowerCase().contains('sukses') ?? false) {
+      if (response.message.toLowerCase().contains('sukses') ?? false) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Barang berhasil dihapus')),
         );

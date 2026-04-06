@@ -1055,7 +1055,7 @@ class _PesanViewState extends State<PesanView> {
                   );
                 },
               );
-            }).toList(),
+            }),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,

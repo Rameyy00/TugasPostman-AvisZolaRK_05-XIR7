@@ -1,74 +1,100 @@
-import 'dart:convert'; 
+import 'dart:convert';
 import 'package:postman/models/response_data_map.dart';
-import 'package:postman/models/user_login.dart'; 
-import 'package:postman/services/url.dart' as url; 
-import 'package:http/http.dart' as http; 
-import 'package:postman/views/register_user_view.dart';
- 
-class UserService { 
-  Future registerUser(data) async { 
-    var uri = Uri.parse(url.BaseUrl + "/auth/register"); 
-    var register = await http.post(uri, body: data); 
- 
-    if (register.statusCode == 200) { 
-      var data = json.decode(register.body); 
-      if (data["status"] == true) { 
-        ResponseDataMap response = ResponseDataMap( 
-            status: true, message: "Sukses menambah user", data: data); 
-        return response; 
-      } else { 
-        var message = ''; 
-        for (String key in data["message"].keys) { 
-          message += data["message"][key][0].toString() + '\n'; 
-        } 
-        ResponseDataMap response = 
-            ResponseDataMap(status: false, message: message); 
-        return response; 
-      } 
-    } else { 
-      ResponseDataMap response = ResponseDataMap( 
-          status: false, 
-          message: 
-              "gagal menambah user dengan code error ${register.statusCode}"); 
-      return response; 
-    } 
+import 'package:postman/models/user_login.dart';
+import 'package:postman/services/url.dart' as url;
+import 'package:http/http.dart' as http;
 
-  } 
-  Future loginUser(data) async {
-  var uri = Uri.parse(url.BaseUrl + "/auth/login");
-  var login = await http.post(uri, body: data);
+class UserService {
+  Future registerUser(Map<String, dynamic> data) async {
+    var uri = Uri.parse("${url.BaseUrl}/auth/register");
 
-  if (login.statusCode == 200) {
-    var data = json.decode(login.body);
-
-    if (data["status"] == true) {
-      UserLogin userLogin = UserLogin(
-        status: data["status"],
-        token: data["token"],
-        massage: data["message"],
-        userId: data["user"]["id"],
-        nama_user: data["user"]["nama_user"], 
-        email: data["user"]["email"],
-        role: data["user"]["role"],
+    try {
+      var register = await http.post(
+        uri,
+        body: data, // For form data, consider adding headers if needed
       );
 
-      await userLogin.saveToPreferences();
+      if (register.statusCode == 200) {
+        var responseBody = json.decode(register.body);
 
-      return ResponseDataMap(
-        status: true,
-        message: data["message"],
-      );
-    } else {
+        if (responseBody["status"] == true) {
+          return ResponseDataMap(
+            status: true,
+            message: "Sukses menambah user",
+            data: responseBody,
+          );
+        } else {
+          String message = '';
+          // Handle both Map and String error messages
+          if (responseBody["message"] is Map) {
+            for (String key in responseBody["message"].keys) {
+              message += '${responseBody["message"][key][0]}\n';
+            }
+          } else {
+            message = responseBody["message"] ?? "Terjadi kesalahan";
+          }
+          return ResponseDataMap(
+            status: false,
+            message: message.trim(),
+          );
+        }
+      } else {
+        return ResponseDataMap(
+          status: false,
+          message: "Gagal menambah user dengan kode error ${register.statusCode}",
+        );
+      }
+    } catch (e) {
       return ResponseDataMap(
         status: false,
-        message: "Email atau Password salah",
+        message: "Gagal terhubung ke server: $e",
       );
     }
-  } else {
-    return ResponseDataMap(
-      status: false,
-      message: "Server error ${login.statusCode}",
-    );
+  }
+
+  Future loginUser(Map<String, dynamic> data) async {
+    var uri = Uri.parse("${url.BaseUrl}/auth/login");
+
+    try {
+      var login = await http.post(uri, body: data);
+
+      if (login.statusCode == 200) {
+        var responseBody = json.decode(login.body);
+
+        if (responseBody["status"] == true) {
+          UserLogin userLogin = UserLogin(
+            status: responseBody["status"],
+            token: responseBody["token"],
+            massage: responseBody["message"],
+            userId: responseBody["user"]["id"],
+            nama_user: responseBody["user"]["nama_user"],
+            email: responseBody["user"]["email"],
+            role: responseBody["user"]["role"],
+          );
+
+          await userLogin.saveToPreferences();
+
+          return ResponseDataMap(
+            status: true,
+            message: responseBody["message"],
+          );
+        } else {
+          return ResponseDataMap(
+            status: false,
+            message: responseBody["message"] ?? "Email atau Password salah",
+          );
+        }
+      } else {
+        return ResponseDataMap(
+          status: false,
+          message: "Server error ${login.statusCode}",
+        );
+      }
+    } catch (e) {
+      return ResponseDataMap(
+        status: false,
+        message: "Gagal terhubung ke server: $e",
+      );
+    }
   }
 }
-} 

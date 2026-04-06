@@ -511,7 +511,7 @@ class _DashboardViewState extends State<DashboardView> {
                                         (pesanan) =>
                                             _buildPesananItem(pesanan, currencyFormat),
                                       )
-                                      .toList(),
+                                      ,
                                 ],
                               ),
                             ),
