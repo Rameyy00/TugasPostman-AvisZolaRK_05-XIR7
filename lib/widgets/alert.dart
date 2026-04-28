@@ -60,7 +60,14 @@ class AlertMessage {
             ),
             IconButton(
               onPressed: () {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                // Schedule dismissal in next frame when context is safe
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  try {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  } catch (e) {
+                    // Silently ignore if context is no longer available
+                  }
+                });
               },
               icon: Icon(
                 Icons.close,
@@ -75,8 +82,16 @@ class AlertMessage {
       ),
     );
 
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    // Schedule SnackBar display in next frame when context is safe
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      } catch (e) {
+        // Silently ignore if context is no longer available
+        print('Error showing SnackBar: $e');
+      }
+    });
   }
 
   Future showAlertDialog(BuildContext context) {

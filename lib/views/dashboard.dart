@@ -833,7 +833,7 @@ class _DashboardViewState extends State<DashboardView> {
           _selectedMenu = index;
         });
         if (menu['route'] != null) {
-          Navigator.pushNamed(context, menu['route']);
+          var pushNamedResult = Navigator.pushNamed(context, menu['route']);
         }
       },
       child: Column(

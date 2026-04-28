@@ -54,6 +54,8 @@ class _BottomNavState extends State<BottomNav> {
       case 1:
         Navigator.pushReplacementNamed(context, '/pesan');
         break;
+        case 2:
+        Navigator.pushReplacementNamed(context, '/history');
     }
   }
 
@@ -83,7 +85,11 @@ class _BottomNavState extends State<BottomNav> {
                   icon: Icon(Icons.shopping_bag),
                   label: 'Pesan',
                 ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.history),
+                  label: 'History',)
               ];
+              
 
     // pengaman currentIndex
     int safeIndex = widget.activePage;
